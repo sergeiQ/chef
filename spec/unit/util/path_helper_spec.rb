@@ -67,26 +67,6 @@ describe Chef::Util::PathHelper do
     end
   end
 
-  describe "native_path" do
-    context "on windows" do
-      it "returns an absolute path with backslashes" do
-        platform_mock :windows do
-          path_helper.stub(:canonical_path).with("/windows/win.ini").and_return("c:/windows/win.ini")
-          expect(path_helper.native_path("/windows/win.ini")).to eq('c:\windows\win.ini')
-        end
-      end
-    end
-
-    context "not on windows" do
-      it "returns a canonical path" do
-        platform_mock :unix do
-          path_helper.stub(:canonical_path).with("/etc//apache.d/sites-enabled/../sites-available/default").and_return("/etc/apache.d/sites-available/default")
-          expect(path_helper.native_path("/etc//apache.d/sites-enabled/../sites-available/default")).to eq("/etc/apache.d/sites-available/default")
-        end
-      end
-    end
-  end
-
   describe "printable?" do
     it "returns true if the string contains no non-printable characters" do
       expect(path_helper.printable?("C:\\Program Files (x86)\\Microsoft Office\\Files.lst")).to be_true
@@ -110,16 +90,38 @@ describe Chef::Util::PathHelper do
     end
   end
 
+  describe "canonical_path" do
+    context "on windows", :windows_only do
+      it "returns an absolute path with backslashes instead of slashes" do
+        expect(path_helper.canonical_path("\\\\?\\C:/windows/win.ini")).to eq("\\\\?\\c:\\windows\\win.ini")
+      end
+
+      it "adds the \\\\?\\ prefix if it is missing" do
+        expect(path_helper.canonical_path("C:/windows/win.ini")).to eq("\\\\?\\c:\\windows\\win.ini")
+      end
+
+      it "returns a lowercase path" do
+        expect(path_helper.canonical_path("\\\\?\\C:\\CASE\\INSENSITIVE")).to eq("\\\\?\\c:\\case\\insensitive")
+      end
+    end
+
+    context "not on windows", :unix_only  do
+      it "returns a canonical path" do
+        expect(path_helper.canonical_path("/etc//apache.d/sites-enabled/../sites-available/default")).to eq("/etc/apache.d/sites-available/default")
+      end
+    end
+  end
+
   describe "paths_eql?" do
     it "returns true if the paths are the same" do
-      path_helper.stub(:canonical_path).with("bandit").and_return("C:/bandit/bandit")
-      path_helper.stub(:canonical_path).with("../bandit/bandit").and_return("C:/bandit/bandit")
+      path_helper.stub(:canonical_path).with("bandit").and_return("c:/bandit/bandit")
+      path_helper.stub(:canonical_path).with("../bandit/bandit").and_return("c:/bandit/bandit")
       expect(path_helper.paths_eql?("bandit", "../bandit/bandit")).to be_true
     end
 
     it "returns false if the paths are different" do
-      path_helper.stub(:canonical_path).with("bandit").and_return("C:/Bo/Bandit")
-      path_helper.stub(:canonical_path).with("../bandit/bandit").and_return("C:/bandit/bandit")
+      path_helper.stub(:canonical_path).with("bandit").and_return("c:/Bo/Bandit")
+      path_helper.stub(:canonical_path).with("../bandit/bandit").and_return("c:/bandit/bandit")
       expect(path_helper.paths_eql?("bandit", "../bandit/bandit")).to be_false
      end
   end

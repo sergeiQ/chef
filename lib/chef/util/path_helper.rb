@@ -54,16 +54,6 @@ class Chef
         false
       end
 
-      def self.native_path(path)
-        # ALT_SEPARATOR is \\ on windows, nil on linux
-        if ::File::ALT_SEPARATOR
-          # Windows API calls often require an absolute path using backslashes, e.g. "C:\Program Files (x86)\Microsoft Office"
-          canonical_path(path).gsub(::File::SEPARATOR, ::File::ALT_SEPARATOR)
-        else
-          canonical_path(path)
-        end
-      end
-
       def self.printable?(string)
         # returns true if string is free of non-printable characters (escape sequences)
         # this returns false for whitespace escape sequences as well, e.g. \n\t
@@ -74,15 +64,26 @@ class Chef
         end
       end
 
-      # Produce a comparable path. File.absolute_path does this for us.
-      # This conveniently matches the case for filenames on Windows as well.
-      def self.canonical_path(path)
-        File.absolute_path(path)
-        # FIXME: Should we always return \\?\path?
+      # Produces a comparable path.
+      def self.canonical_path(path, add_prefix=true)
+        # First remove extra separators and resolve any relative paths
+        abs_path = File.absolute_path(path)
+
+        if Chef::Platform.windows?
+          # Add the \\?\ API prefix on Windows unless add_prefix is false
+          # Downcase on Windows where paths are still case-insensitive
+          abs_path.gsub!(::File::SEPARATOR, ::File::ALT_SEPARATOR)
+          if add_prefix && abs_path !~ /^\\\\?\\/
+            abs_path.insert(0, "\\\\?\\")
+          end
+
+          abs_path.downcase!
+        end
+
+        abs_path
       end
 
       def self.paths_eql?(path1, path2)
-        # FIXME: What about \\?\C:\foo versus C:\foo?
         canonical_path(path1) == canonical_path(path2)
       end
     end
