@@ -25,26 +25,21 @@ class Chef
       # Maximum characters in a standard Windows path (260 including drive letter and NUL)
       WIN_MAX_PATH = 259
 
-      def self.valid_path?(path, warn=false, error=false)
-        valid_path = true
-
+      def self.validate_path(path)
         if Chef::Platform.windows?
           unless printable?(path)
             msg = "Path '#{path}' contains non-printable characters. Check that backslashes are escaped with another backslash (e.g. C:\\\\Windows) in double-quoted strings."
-            Chef::Log.warn(msg) if warn
-            raise Chef::Exceptions::ValidationFailed, msg if error
-            valid_path = false
+            Chef::Log.error(msg)
+            raise Chef::Exceptions::ValidationFailed, msg
           end
             
           if windows_max_length_exceeded?(path)
-            msg = "Path '#{path}' is longer than #{WIN_MAX_PATH}, and therefore must be prefexed with '\\\\?\\'"
-            Chef::Log.warn(msg) if warn
-            raise Chef::Exceptions::ValidationFailed, msg if error
-            valid_path = false
+            Chef::Log.debug("Path '#{path}' is longer than #{WIN_MAX_PATH}, prefixing with'\\\\?\\'")
+            path.insert(0, "\\\\?\\")
           end
         end
-      
-        valid_path
+
+        path
       end
 
       def self.windows_max_length_exceeded?(path)
@@ -83,9 +78,11 @@ class Chef
       # This conveniently matches the case for filenames on Windows as well.
       def self.canonical_path(path)
         File.absolute_path(path)
+        # FIXME: Should we always return \\?\path?
       end
 
       def self.paths_eql?(path1, path2)
+        # FIXME: What about \\?\C:\foo versus C:\foo?
         canonical_path(path1) == canonical_path(path2)
       end
     end

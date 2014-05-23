@@ -27,7 +27,7 @@ describe Chef::Provider::Package::Windows, :windows_only do
 
   describe "load_current_resource" do
     before(:each) do
-      Chef::Util::PathHelper.stub(:invalid_path?).and_return(false)
+      Chef::Util::PathHelper.stub(:validate_path)
       provider.stub(:package_provider).and_return(double('package_provider',
           :installed_version => "1.0", :package_version => "2.0"))
     end
@@ -49,7 +49,7 @@ describe Chef::Provider::Package::Windows, :windows_only do
     end
 
     it "checks that the source path is valid" do
-      expect(Chef::Util::PathHelper).to receive(:invalid_path?)
+      expect(Chef::Util::PathHelper).to receive(:validate_path)
       provider.load_current_resource
     end
   end
